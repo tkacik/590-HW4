@@ -1,15 +1,13 @@
 # candyGame.py
 # Created by T. J. Tkacik for Assignment 4 of COMP 590
 # Spring of 2014 at the University of North Carolina
-import util, sys, time, os
+import util, sys, time, os, math
 
 
 class lexicon(object):
-    def __init__(self, folder=None):
+    def __init__(self, folder):
         self.dictionary = {}
-        self.folder = folder
-        if folder == None:
-            self.folder = "emails"           
+        self.folder = folder           
         self.load(self.folder)
         
     def load(self, folder):
@@ -24,7 +22,31 @@ class lexicon(object):
                                     self.dictionary[words] += 1
                                 else:
                                     self.dictionary[words] = 1
-        print len(self.dictionary) #.items()
+        print len(self.dictionary)
+        
+class spamClassifier(object):
+    def __init__(self, folder=None):
+        self.folder = folder
+        if folder == None:
+            self.folder = "emails"
+        #Compute Features
+        self.lexicon = lexicon(folder)
+        
+        #Training
+        lgPriors = calcPriors(folder)
+        print lgPriors
+        #lgLikelihoods = calcLikelyhoods(folder)
+        
+        #Testing
+        
+    def calcPriors(self, folder):
+        spamCount = 0
+        hamCount = 0
+        for txt in os.listdir(os.path.join(folder, "spamtraining")):
+            spamCount += 1
+        for txt in os.listdir(os.path.join(folder, "hamtraining")):
+            hamCount += 1
+        return (math.log(spamCount/(spamCount+hamCount)), math.log(hamCount/(spamCount+hamCount)))
                             
 class candyGame(object):
     
