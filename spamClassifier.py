@@ -1,14 +1,18 @@
 # candyGame.py
 # Created by T. J. Tkacik for Assignment 4 of COMP 590
 # Spring of 2014 at the University of North Carolina
-import util, sys, time, os, math
+import util, sys, time, os, math, random
 
 
 class lexicon(object):
-    def __init__(self, folder):
+    def __init__(self, folder = None, dictionary = None):
         self.dictionary = {}
-        self.folder = folder           
-        self.load(self.folder)
+        self.folder = folder
+        if dictionary != None:
+            self.dictionary = dictionary
+            #print "Dictionary Copied", len(dictionary)
+        if folder != None:
+            self.load(self.folder)
         
     def load(self, folder):
         fileCount = 0
@@ -22,32 +26,149 @@ class lexicon(object):
                                     self.dictionary[words] += 1
                                 else:
                                     self.dictionary[words] = 1
-        print len(self.dictionary)
+    
+    def purge(self, k=0):
+        toDrop = set()
+        for keys in self.dictionary:
+            if self.dictionary[keys] < k:
+                toDrop.add(keys)
+        for keys in toDrop:
+            del self.dictionary[keys]
+
+    def duplicate(self):
+        return lexicon(None, self.dictionary.copy())
+
         
 class spamClassifier(object):
     def __init__(self, folder=None):
         self.folder = folder
-        if folder == None:
+        if self.folder == None:
             self.folder = "emails"
+       
         #Compute Features
-        self.lexicon = lexicon(folder)
+        self.lexicon = lexicon(self.folder)
         
-        #Training
-        lgPriors = calcPriors(folder)
-        print lgPriors
-        #lgLikelihoods = calcLikelyhoods(folder)
+        #Tune and Train
+        self.lgPriors = self.calcPriors(self.folder)
+        k,m = self.tuneParameters(self.folder)
+        self.lexicon.purge(k)
+        lgLikelihoods = self.calcLikelihoods(self.folder, self.lexicon, m)
         
-        #Testing
+        #Test
+        confusionMatrix = self.test(self.folder, self.lgPriors, lgLikelihoods)
+        print confusionMatrix
         
-    def calcPriors(self, folder):
-        spamCount = 0
-        hamCount = 0
+    def tuneParameters(self, folder):   #Tuple: k, m
+        parameterMatrix = [[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0]]
+        M, K = 99, 99
+        best = 0
+        x, y = -1, -1
+        for k in set([0,1,5,10,20]):
+            x += 1
+            y = -1
+            for m in set([1,5,10,25,50]):
+                y += 1
+                trainingSet = set()
+                holdOutSet = set()
+                for txt in os.listdir(os.path.join(folder, "spamtraining")):
+                    if random.random() < 0.50:
+                        holdOutSet.add((os.path.join(folder, "spamtraining", txt), "spam"))
+                    else: trainingSet.add((os.path.join(folder, "spamtraining", txt), "spam"))
+                for txt in os.listdir(os.path.join(folder, "hamtraining")):
+                    if random.random() < 0.50:
+                        holdOutSet.add((os.path.join(folder, "hamtraining", txt), "ham"))
+                    else: trainingSet.add((os.path.join(folder, "hamtraining", txt), "ham"))
+                    wat = txt
+                lex = self.lexicon.duplicate()
+                lex.purge(k)
+                lgLikelihoods = self.calcLikelihoods(self.folder, lex, m, trainingSet)
+                accuracy = self.calcAccuracy(self.test(self.folder, self.lgPriors, lgLikelihoods, holdOutSet))
+                if accuracy > best:
+                    best, M, K = accuracy, m, k
+                    print "new best M, K:", M, K
+                parameterMatrix[x][y] = accuracy
+        print parameterMatrix
+        print K, M
+            
+        return K, M
+    
+    def calcAccuracy(self, matrix):
+        return (float(matrix[0][0]) + matrix[1][1])/(matrix[0][0] + matrix[0][1] + matrix[1][0] + matrix[1][1])
+                
+        
+    def test(self, folder, lgPriors, lgLikelihoods, testSet=None):
+        confusionMatrix = [[0,0],[0,0]]  #m[0][1] is count of spam labeled ham
+        
+        if testSet == None:
+            testSet = set()
+            for txt in os.listdir(os.path.join(folder, "spamtesting")):
+                testSet.add((os.path.join(folder, "spamtesting", txt), "spam"))
+            for txt in os.listdir(os.path.join(folder, "hamtesting")):
+                testSet.add((os.path.join(folder, "hamtesting", txt), "ham"))
+                
+                
+        for path in testSet:
+            pSpam, pHam = lgPriors[0], lgPriors[1]
+            for lines in open(path[0]):
+                for words in lines.strip().split(" "):
+                    if words in lgLikelihoods:
+                        pSpam += lgLikelihoods[words][0]
+                        pHam += lgLikelihoods[words][1]
+            if pSpam == pHam : print "ERROR: NO ASSIGNMENT"
+            if path[1] == "spam":
+                if pSpam > pHam: confusionMatrix[0][0] += 1
+                else: 
+                    confusionMatrix[0][1] += 1
+                    #print "Bad Assignment:", path[0], "as ham"
+            elif path[1] == "ham":
+                if pSpam > pHam: 
+                    confusionMatrix[1][0] += 1
+                    #print "Bad Assignment:", path[0], "as spam"
+                else: confusionMatrix[1][1] += 1
+
+        return confusionMatrix
+        
+    def calcPriors(self, folder):   #Tuple: (lg(spamPrior), lg(hamPrior))
+        spamCount = 0.0
+        hamCount = 0.0
         for txt in os.listdir(os.path.join(folder, "spamtraining")):
             spamCount += 1
         for txt in os.listdir(os.path.join(folder, "hamtraining")):
             hamCount += 1
         return (math.log(spamCount/(spamCount+hamCount)), math.log(hamCount/(spamCount+hamCount)))
-                            
+    
+    def calcLikelihoods(self, folder, lexicon, m=1, trainingSet=None):    #Dictionary of tuples: {key: (lg(spamLikelihood), lg(hamLikelihood))}
+        counts = {}
+        m += 0.0
+        spamTotal = 0.0
+        hamTotal = 0.0
+        if trainingSet == None:
+            trainingSet = set()
+            for txt in os.listdir(os.path.join(folder, "spamtraining")):
+                trainingSet.add((os.path.join(folder, "spamtraining", txt), "spam"))
+            for txt in os.listdir(os.path.join(folder, "hamtraining")):
+                trainingSet.add((os.path.join(folder, "hamtraining", txt), "ham"))
+                
+        for path in trainingSet:
+            for lines in open(path[0]):
+                for words in lines.strip().split(" "):
+                    if words in lexicon.dictionary:
+                        if words not in counts:
+                            counts[words] = (m, m)
+                            spamTotal += m
+                            hamTotal += m
+                        elif path[1] == "spam":
+                            counts[words] = (counts[words][0] + 1, counts[words][1])
+                            spamTotal += 1
+                        elif path[1] == "ham":
+                            counts[words] = (counts[words][0], counts[words][1] + 1)
+                            hamTotal += 1
+
+        for words in counts:
+            counts[words] = (math.log(counts[words][0]/(spamTotal)), math.log(counts[words][1]/(hamTotal)))
+        print spamTotal, hamTotal
+        return counts
+                
 class candyGame(object):
     
     def __init__(self, scoreBoard="game_boards/ReesesPieces.txt", player1="human", player2="human", loud=False):
@@ -461,7 +582,7 @@ class quiescencePlayer(candyPlayer):
         
          
 if  __name__ =='__main__':
-    lexicon()
+    spamClassifier()
     
     ''' board = "game_boards/ReesesPieces.txt"
     heuristic = ""
