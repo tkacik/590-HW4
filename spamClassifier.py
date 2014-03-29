@@ -1,8 +1,31 @@
 # candyGame.py
-# Created by T. J. Tkacik for Assignment 2 of COMP 590
+# Created by T. J. Tkacik for Assignment 4 of COMP 590
 # Spring of 2014 at the University of North Carolina
-import util, sys, time
+import util, sys, time, os
 
+
+class lexicon(object):
+    def __init__(self, folder=None):
+        self.dictionary = {}
+        self.folder = folder
+        if folder == None:
+            self.folder = "emails"           
+        self.load(self.folder)
+        
+    def load(self, folder):
+        fileCount = 0
+        for root, subFolders, files in os.walk(folder):
+                for txt in files:
+                    fileCount += 1
+                    with open(os.path.join(root, txt), 'r') as fin:
+                        for lines in fin:
+                            for words in lines.strip().split(" "):
+                                if words in self.dictionary:
+                                    self.dictionary[words] += 1
+                                else:
+                                    self.dictionary[words] = 1
+        print len(self.dictionary) #.items()
+                            
 class candyGame(object):
     
     def __init__(self, scoreBoard="game_boards/ReesesPieces.txt", player1="human", player2="human", loud=False):
@@ -416,7 +439,9 @@ class quiescencePlayer(candyPlayer):
         
          
 if  __name__ =='__main__':
-    board = "game_boards/ReesesPieces.txt"
+    lexicon()
+    
+    ''' board = "game_boards/ReesesPieces.txt"
     heuristic = ""
     loud = False
     p1 = "human"
@@ -452,3 +477,4 @@ if  __name__ =='__main__':
         p2 = sys.argv[sys.argv.index("-p2")+1]
     
     game = candyGame(board, p1, p2, loud)
+'''
