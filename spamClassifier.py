@@ -40,8 +40,10 @@ class lexicon(object):
 
         
 class spamClassifier(object):
-    def __init__(self, folder=None):
+    def __init__(self, folder=None, m =1, k = 3, tune = False, loud = False):
         self.folder = folder
+        self.loud = loud
+        m, k = float(m), float(k)
         if self.folder == None:
             self.folder = "emails"
        
@@ -50,7 +52,8 @@ class spamClassifier(object):
         
         #Tune and Train
         self.lgPriors = self.calcPriors(self.folder)
-        k,m = self.tuneParameters(self.folder)
+        if tune:
+            k,m = self.tuneParameters(self.folder, m, k)
         self.lexicon.purge(k)
         self.lgLikelihoods = self.calcLikelihoods(self.folder, self.lexicon, m)
         
@@ -71,16 +74,16 @@ class spamClassifier(object):
             elif pSpam > pHam: print "Spam"
             else: print "Ham"
         
-    def tuneParameters(self, folder):   #Tuple: k, m
+    def tuneParameters(self, folder, m, k):   #Tuple: k, m
+        if self.loud:
+            print "Tuning values for M and K..."
         parameterMatrix = [[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0]]
         M, K = 99, 99
         best = 0
-        x, y = -1, -1
-        for k in set([0,1,5,10,20]):
-            x += 1
-            y = -1
-            for m in set([1,5,10,25,50]):
-                y += 1
+        for x in range(-1,3):
+            M = math.floor(m*1.5**x)
+            for y in range(-1,3):
+                K = math.floor(k*1.5**y)
                 trainingSet = set()
                 holdOutSet = set()
                 for txt in os.listdir(os.path.join(folder, "spamtraining")):
@@ -97,14 +100,12 @@ class spamClassifier(object):
                 lgLikelihoods = self.calcLikelihoods(self.folder, lex, m, trainingSet)
                 accuracy = self.calcAccuracy(self.test(self.folder, self.lgPriors, lgLikelihoods, holdOutSet))
                 if accuracy > best:
-                    best, M, K = accuracy, m, k
-                    print "new best M, K:", M, K
-                parameterMatrix[x][y] = accuracy
-        for lines in parameterMatrix:
-            print lines
-        print K, M
+                    best, bestM, bestK = accuracy, M, K
+                parameterMatrix[x+1][y+1] = accuracy
+        if self.loud:
+            print "Best values for M, K:", bestM, bestK 
             
-        return K, M
+        return bestK, bestM
     
     def calcAccuracy(self, matrix):
         return (float(matrix[0][0]) + matrix[1][1])/(matrix[0][0] + matrix[0][1] + matrix[1][0] + matrix[1][1])
@@ -183,7 +184,24 @@ class spamClassifier(object):
         return counts
           
 if  __name__ =='__main__':
-    spamClassifier().predict("emails/hamtesting/2054.2000-08-28.farmer.ham.txt")
+    loud = False
+    m = 1
+    k = 3
+    tune = False
+    folder = "emails"
+    
+    if "-l" in sys.argv:
+        loud = True
+    if "-t" in sys.argv:
+        tune = True
+    if "-m" in sys.argv:
+        m = sys.argv[sys.argv.index("-m")+1]
+    if "-k" in sys.argv:
+        k = sys.argv[sys.argv.index("-k")+1]
+    if "-f" in sys.argv:
+        folder = sys.argv[sys.argv.index("-f")+1]
+    
+    spamClassifier(folder, m, k, tune, loud).predict("emails/hamtesting/2054.2000-08-28.farmer.ham.txt")
     
     ''' board = "game_boards/ReesesPieces.txt"
     heuristic = ""
