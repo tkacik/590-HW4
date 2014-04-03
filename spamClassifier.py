@@ -97,7 +97,7 @@ class spamClassifier(object):
                     holdOutSet.add((os.path.join(folder, "hamtraining", txt), "ham"))
                 else: trainingSet.add((os.path.join(folder, "hamtraining", txt), "ham"))
             for x in range(0,5):
-                M = m*1.8**(x-1)
+                M = m*1.8**(x-2)
                 for y in range(0,5):
                     K = math.floor(k*1.8**(y-1))
                     lex = self.lexicon.duplicate()
