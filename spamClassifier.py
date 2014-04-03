@@ -59,8 +59,16 @@ class spamClassifier(object):
         
         #Test
         confusionMatrix = self.test(self.folder, self.lgPriors, self.lgLikelihoods)
-        for lines in confusionMatrix:
-            print lines
+        if self.loud:
+            print "Confusion Matrix:"
+            print "Spam, Ham"
+            for lines in confusionMatrix:
+                print lines
+            print "Overall Accuracy:", self.calcAccuracy(confusionMatrix)
+            print "Spam Accuracy:", float(confusionMatrix[0][0])/(sum(confusionMatrix[0]))
+            print "Ham Accuracy:", float(confusionMatrix[1][1])/(sum(confusionMatrix[1]))
+
+
             
     def predict(self, predictionSet):
         if predictionSet.endswith(".txt"):
@@ -80,36 +88,41 @@ class spamClassifier(object):
         parameterMatrix = [[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0]]
         M, K = 99, 99
         best = 0
-        for x in range(-1,3):
-            M = math.floor(m*1.5**x)
-            for y in range(-1,3):
-                K = math.floor(k*1.5**y)
-                trainingSet = set()
-                holdOutSet = set()
-                for txt in os.listdir(os.path.join(folder, "spamtraining")):
-                    if random.random() < 0.50:
-                        holdOutSet.add((os.path.join(folder, "spamtraining", txt), "spam"))
-                    else: trainingSet.add((os.path.join(folder, "spamtraining", txt), "spam"))
-                for txt in os.listdir(os.path.join(folder, "hamtraining")):
-                    if random.random() < 0.50:
-                        holdOutSet.add((os.path.join(folder, "hamtraining", txt), "ham"))
-                    else: trainingSet.add((os.path.join(folder, "hamtraining", txt), "ham"))
-                    wat = txt
-                lex = self.lexicon.duplicate()
-                lex.purge(k)
-                lgLikelihoods = self.calcLikelihoods(self.folder, lex, m, trainingSet)
-                accuracy = self.calcAccuracy(self.test(self.folder, self.lgPriors, lgLikelihoods, holdOutSet))
-                if accuracy > best:
-                    best, bestM, bestK = accuracy, M, K
-                parameterMatrix[x+1][y+1] = accuracy
+        for i in range(0,4):
+            for x in range(0,5):
+                M = 1 + math.floor(m*1.8**(x-1))
+                for y in range(0,5):
+                    K = math.floor(k*1.8**(y-1))
+                    trainingSet = set()
+                    holdOutSet = set()
+                    for txt in os.listdir(os.path.join(folder, "spamtraining")):
+                        if random.random() < 0.50:
+                            holdOutSet.add((os.path.join(folder, "spamtraining", txt), "spam"))
+                        else: trainingSet.add((os.path.join(folder, "spamtraining", txt), "spam"))
+                    for txt in os.listdir(os.path.join(folder, "hamtraining")):
+                        if random.random() < 0.50:
+                            holdOutSet.add((os.path.join(folder, "hamtraining", txt), "ham"))
+                        else: trainingSet.add((os.path.join(folder, "hamtraining", txt), "ham"))
+                        wat = txt
+                    lex = self.lexicon.duplicate()
+                    lex.purge(K)
+                    lgLikelihoods = self.calcLikelihoods(self.folder, lex, M, trainingSet)
+                    parameterMatrix[x][y] += self.calcAccuracy(self.test(self.folder, self.lgPriors, lgLikelihoods, holdOutSet))
+                    if parameterMatrix[x][y] > best:
+                        best, bestM, bestK = parameterMatrix[x][y], M, K
+                    #parameterMatrix[x+1][y+1] = accuracy
         if self.loud:
             print "Best values for M, K:", bestM, bestK 
             
         return bestK, bestM
     
     def calcAccuracy(self, matrix):
-        return (float(matrix[0][0]) + matrix[1][1])/(matrix[0][0] + matrix[0][1] + matrix[1][0] + matrix[1][1])
-                
+        correct = 0
+        total = 0.0
+        for x in range(0, len(matrix)):
+            correct += matrix[x][x]
+            total += sum(matrix[x])
+        return correct/total                
         
     def test(self, folder, lgPriors, lgLikelihoods, testSet=None):
         confusionMatrix = [[0,0],[0,0]]  #m[0][1] is count of spam labeled ham
@@ -200,8 +213,11 @@ if  __name__ =='__main__':
         k = sys.argv[sys.argv.index("-k")+1]
     if "-f" in sys.argv:
         folder = sys.argv[sys.argv.index("-f")+1]
+        
+    classifier = spamClassifier(folder, m, k, tune, loud)
     
-    spamClassifier(folder, m, k, tune, loud).predict("emails/hamtesting/2054.2000-08-28.farmer.ham.txt")
+    if "-p" in sys.argv:
+         classifier.predict(sys.argv[sys.argv.index("-p")+1])
     
     ''' board = "game_boards/ReesesPieces.txt"
     heuristic = ""
