@@ -5,7 +5,7 @@ import util, sys, time, os, math, random
 
 
 class lexicon(object):
-    def __init__(self, folder = None, dictionary = None):
+    def __init__(self, folder = None, dictionary = None, n=1):
         self.dictionary = {}
         self.folder = folder
         if dictionary != None:
@@ -15,18 +15,28 @@ class lexicon(object):
             self.load(self.folder)
         
     def load(self, folder):
-        fileCount = 0
         for root, subFolders, files in os.walk(folder):
-                for txt in files:
-                    fileCount += 1
-                    with open(os.path.join(root, txt), 'r') as fin:
-                        for lines in fin:
-                            for words in lines.strip().split(" "):
-                                if words in self.dictionary:
-                                    self.dictionary[words] += 1
-                                else:
-                                    self.dictionary[words] = 1
-    
+            for txt in files:
+                with open(os.path.join(root, txt), 'r') as fin:
+                    for lines in fin:
+                        for words in lines.strip().split(" "):
+                            if words in self.dictionary:
+                                self.dictionary[words] += 1
+                            else:
+                                self.dictionary[words] = 1
+    def nload(self, folder, n):
+        lastWords = [None]*n
+        i=0
+        for root, subFolders, files in os.walk(folder):
+            for txt in files:
+                with open(os.path.join(root, txt), 'r') as fin:
+                    for lines in fin:
+                        for words in lines.strip().split(" "):
+                            if words in self.dictionary:
+                                self.dictionary[words] += 1
+                            else:
+                                self.dictionary[words] = 1
+
     def purge(self, k=0):
         toDrop = set()
         for keys in self.dictionary:
