@@ -5,28 +5,15 @@ import util, sys, time, os, math, random
 
 
 class lexicon(object):
-    def __init__(self, folder = None, dictionary = None, n=1):
+    def __init__(self, folder = None, dictionary = None):
         self.dictionary = {}
         self.folder = folder
         if dictionary != None:
             self.dictionary = dictionary
-            #print "Dictionary Copied", len(dictionary)
         if folder != None:
             self.load(self.folder)
         
     def load(self, folder):
-        for root, subFolders, files in os.walk(folder):
-            for txt in files:
-                with open(os.path.join(root, txt), 'r') as fin:
-                    for lines in fin:
-                        for words in lines.strip().split(" "):
-                            if words in self.dictionary:
-                                self.dictionary[words] += 1
-                            else:
-                                self.dictionary[words] = 1
-    def nload(self, folder, n):
-        lastWords = [None]*n
-        i=0
         for root, subFolders, files in os.walk(folder):
             for txt in files:
                 with open(os.path.join(root, txt), 'r') as fin:
@@ -58,13 +45,14 @@ class spamClassifier(object):
             self.folder = "emails"
        
         #Compute Features
-        self.lexicon = lexicon(self.folder)
+        self.lexicon = lexicon(self.folder, None)
         
         #Tune and Train
         self.lgPriors = self.calcPriors(self.folder)
         if tune:
             k,m = self.tuneParameters(self.folder, m, k)
         self.lexicon.purge(k)
+
         self.lgLikelihoods = self.calcLikelihoods(self.folder, self.lexicon, m)
         
         #Test
@@ -89,6 +77,7 @@ class spamClassifier(object):
             if pSpam == pHam : print "ERROR: NO ASSIGNMENT"
             elif pSpam > pHam: print "Spam"
             else: print "Ham"
+            print pSpam, pHam
             print "pSpam/pHam:", math.exp(pSpam - pHam)
             
     def tuneParameters(self, folder, m, k):   #Tuple: k, m
@@ -150,6 +139,7 @@ class spamClassifier(object):
                         pSpam += lgLikelihoods[words][0]
                         pHam += lgLikelihoods[words][1]
             if pSpam == pHam : print "ERROR: NO ASSIGNMENT"
+            #print pSpam, pHam
             if path[1] == "spam":
                 if pSpam > pHam: confusionMatrix[0][0] += 1
                 else: 
@@ -222,46 +212,9 @@ if  __name__ =='__main__':
         k = sys.argv[sys.argv.index("-k")+1]
     if "-f" in sys.argv:
         folder = sys.argv[sys.argv.index("-f")+1]
-        
+
     classifier = spamClassifier(folder, m, k, tune, loud)
     
     if "-p" in sys.argv:
          classifier.predict(sys.argv[sys.argv.index("-p")+1])
     
-    ''' board = "game_boards/ReesesPieces.txt"
-    heuristic = ""
-    loud = False
-    p1 = "human"
-    p2 = "human"
-    if "--help" in sys.argv:
-        print """
-        candyGame.py by T. J. Tkacik
-        
-        Accepted flags:
-
-        --help    for this help information
-        -l        for loud output, default False
-        -b        for game board source, default ReesesPieces.txt
-        -p1       for player one, default is human, see below
-        -p2       for player two, default is human, see below
-            players are given in form <playertype><depth>
-                Acceptable playertypes: human minimax alphabeta quiescence
-            Default depth is used if none is given
-                Default depths: human:0 minimax:3 alphabeta:4 quiescence:2
-                
-        Examples:   candyGame.py -l -p2 minimax3 -b Ayds.txt
-                    candyGame.py -b long.txt -p1 minimax -p2 alphabeta3
-                    candyGame.py -b oases.txt -p1 human -p2 quiescence
-        """
-        sys.exit(0)
-    if "-l" in sys.argv:
-        loud = True
-    if "-b" in sys.argv:
-        board = "game_boards/" + sys.argv[sys.argv.index("-b")+1]
-    if "-p1" in sys.argv:
-        p1 = sys.argv[sys.argv.index("-p1")+1]
-    if "-p2" in sys.argv:
-        p2 = sys.argv[sys.argv.index("-p2")+1]
-    
-    game = candyGame(board, p1, p2, loud)
-'''
