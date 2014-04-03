@@ -1,7 +1,7 @@
-# candyGame.py
+# spamClassifier.py
 # Created by T. J. Tkacik for Assignment 4 of COMP 590
 # Spring of 2014 at the University of North Carolina
-import util, sys, time, os, math, random
+import sys, time, os, math, random
 
 
 class lexicon(object):
@@ -13,7 +13,7 @@ class lexicon(object):
         if folder != None:
             self.load(self.folder)
         
-    def load(self, folder):
+    def load(self, folder):     #Count the number of times each word is observed
         for root, subFolders, files in os.walk(folder):
             for txt in files:
                 with open(os.path.join(root, txt), 'r') as fin:
@@ -24,7 +24,7 @@ class lexicon(object):
                             else:
                                 self.dictionary[words] = 1
 
-    def purge(self, k=0):
+    def purge(self, k=0):       #Remove keys without at least k observations
         toDrop = set()
         for keys in self.dictionary:
             if self.dictionary[keys] < k:
@@ -107,13 +107,12 @@ class spamClassifier(object):
                     parameterMatrix[x][y] += self.calcAccuracy(self.test(self.folder, self.lgPriors, lgLikelihoods, holdOutSet))
                     if parameterMatrix[x][y] > best:
                         best, bestM, bestK = parameterMatrix[x][y], M, K
-                    #parameterMatrix[x+1][y+1] = accuracy
         if self.loud:
             print "Best values for M, K:", bestM, bestK 
             
         return bestK, bestM
     
-    def calcAccuracy(self, matrix):
+    def calcAccuracy(self, matrix):     #Determine accuracy given a confusion matrix
         correct = 0
         total = 0.0
         for x in range(0, len(matrix)):
