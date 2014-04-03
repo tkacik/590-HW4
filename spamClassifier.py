@@ -40,7 +40,7 @@ class lexicon(object):
 
         
 class spamClassifier(object):
-    def __init__(self, folder=None, m =1, k = 3, tune = False, loud = False):
+    def __init__(self, folder=None, m =2, k = 5, tune = False, loud = False):
         self.folder = folder
         self.loud = loud
         m, k = float(m), float(k)
@@ -67,8 +67,6 @@ class spamClassifier(object):
             print "Overall Accuracy:", self.calcAccuracy(confusionMatrix)
             print "Spam Accuracy:", float(confusionMatrix[0][0])/(sum(confusionMatrix[0]))
             print "Ham Accuracy:", float(confusionMatrix[1][1])/(sum(confusionMatrix[1]))
-
-
             
     def predict(self, predictionSet):
         if predictionSet.endswith(".txt"):
@@ -81,7 +79,8 @@ class spamClassifier(object):
             if pSpam == pHam : print "ERROR: NO ASSIGNMENT"
             elif pSpam > pHam: print "Spam"
             else: print "Ham"
-        
+            print "pSpam/pHam:", math.exp(pSpam - pHam)
+            
     def tuneParameters(self, folder, m, k):   #Tuple: k, m
         if self.loud:
             print "Tuning values for M and K..."
@@ -89,21 +88,20 @@ class spamClassifier(object):
         M, K = 99, 99
         best = 0
         for i in range(0,4):
+            trainingSet = set()
+            holdOutSet = set()
+            for txt in os.listdir(os.path.join(folder, "spamtraining")):
+                if random.random() < 0.50:
+                    holdOutSet.add((os.path.join(folder, "spamtraining", txt), "spam"))
+                else: trainingSet.add((os.path.join(folder, "spamtraining", txt), "spam"))
+            for txt in os.listdir(os.path.join(folder, "hamtraining")):
+                if random.random() < 0.50:
+                    holdOutSet.add((os.path.join(folder, "hamtraining", txt), "ham"))
+                else: trainingSet.add((os.path.join(folder, "hamtraining", txt), "ham"))
             for x in range(0,5):
                 M = 1 + math.floor(m*1.8**(x-1))
                 for y in range(0,5):
                     K = math.floor(k*1.8**(y-1))
-                    trainingSet = set()
-                    holdOutSet = set()
-                    for txt in os.listdir(os.path.join(folder, "spamtraining")):
-                        if random.random() < 0.50:
-                            holdOutSet.add((os.path.join(folder, "spamtraining", txt), "spam"))
-                        else: trainingSet.add((os.path.join(folder, "spamtraining", txt), "spam"))
-                    for txt in os.listdir(os.path.join(folder, "hamtraining")):
-                        if random.random() < 0.50:
-                            holdOutSet.add((os.path.join(folder, "hamtraining", txt), "ham"))
-                        else: trainingSet.add((os.path.join(folder, "hamtraining", txt), "ham"))
-                        wat = txt
                     lex = self.lexicon.duplicate()
                     lex.purge(K)
                     lgLikelihoods = self.calcLikelihoods(self.folder, lex, M, trainingSet)
@@ -133,8 +131,7 @@ class spamClassifier(object):
                 testSet.add((os.path.join(folder, "spamtesting", txt), "spam"))
             for txt in os.listdir(os.path.join(folder, "hamtesting")):
                 testSet.add((os.path.join(folder, "hamtesting", txt), "ham"))
-                
-                
+                   
         for path in testSet:
             pSpam, pHam = lgPriors[0], lgPriors[1]
             for lines in open(path[0]):
@@ -148,10 +145,12 @@ class spamClassifier(object):
                 else: 
                     confusionMatrix[0][1] += 1
                     #print "Bad Assignment:", path[0], "as ham"
+                    #print "pSpam/pHam:", math.exp(pSpam - pHam)
             elif path[1] == "ham":
                 if pSpam > pHam: 
                     confusionMatrix[1][0] += 1
                     #print "Bad Assignment:", path[0], "as spam"
+                    #print "pSpam/pHam:", math.exp(pSpam - pHam)
                 else: confusionMatrix[1][1] += 1
 
         return confusionMatrix
@@ -198,8 +197,8 @@ class spamClassifier(object):
           
 if  __name__ =='__main__':
     loud = False
-    m = 1
-    k = 3
+    m = 2
+    k = 5
     tune = False
     folder = "emails"
     
