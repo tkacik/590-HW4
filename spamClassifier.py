@@ -142,12 +142,12 @@ class spamClassifier(object):
                 if pSpam > pHam: confusionMatrix[0][0] += 1
                 else: 
                     confusionMatrix[0][1] += 1
-                    print "Bad Assignment:", path[0], "as ham"
+                    #print "Bad Assignment:", path[0], "as ham"
                     #print "pSpam/pHam:", math.exp(pSpam - pHam)
             elif path[1] == "ham":
                 if pSpam > pHam: 
                     confusionMatrix[1][0] += 1
-                    print "Bad Assignment:", path[0], "as spam"
+                    #print "Bad Assignment:", path[0], "as spam"
                     #print "pSpam/pHam:", math.exp(pSpam - pHam)
                 else: confusionMatrix[1][1] += 1
 
