@@ -12,5 +12,5 @@ spamClassifier.py by T. J. Tkacik
         -p        to provide the relative path to a email to predict
                
         Examples:   spamClassifier.py -l -m 10 -k 10
-                    spamClassifier.py -t -p emails/hamtesting/3110.2004-12-08.GP.spam.txt
+                    spamClassifier.py -t -p emails/spamtesting/3110.2004-12-08.GP.spam.txt
                     spamClassifier.py -l -m 4 -t

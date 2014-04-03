@@ -75,9 +75,8 @@ class spamClassifier(object):
                         pSpam += self.lgLikelihoods[words][0]
                         pHam += self.lgLikelihoods[words][1]
             if pSpam == pHam : print "ERROR: NO ASSIGNMENT"
-            elif pSpam > pHam: print "Spam"
-            else: print "Ham"
-            print pSpam, pHam
+            elif pSpam > pHam: print "Assignment: Spam"
+            else: print "Assignment: Ham"
             print "pSpam/pHam:", math.exp(pSpam - pHam)
             
     def tuneParameters(self, folder, m, k):   #Tuple: k, m
@@ -98,7 +97,7 @@ class spamClassifier(object):
                     holdOutSet.add((os.path.join(folder, "hamtraining", txt), "ham"))
                 else: trainingSet.add((os.path.join(folder, "hamtraining", txt), "ham"))
             for x in range(0,5):
-                M = 1 + math.floor(m*1.8**(x-1))
+                M = m*1.8**(x-1)
                 for y in range(0,5):
                     K = math.floor(k*1.8**(y-1))
                     lex = self.lexicon.duplicate()
@@ -200,6 +199,25 @@ if  __name__ =='__main__':
     k = 5
     tune = False
     folder = "emails"
+    
+    if "--help" in sys.argv:
+        print """
+        spamClassifier.py by T. J. Tkacik
+        
+        Accepted flags:
+
+        --help    for this help information
+        -l        for loud output, default False
+        -f        to select folder, default 'emails'
+        -m        to assign Laplace smoothing m value, default 2
+        -k        to assign minimum observations, default 5
+        -p        to provide the relative path to a email to predict
+               
+        Examples:   spamClassifier.py -l -m 10 -k 10
+                    spamClassifier.py -t -p emails/hamtesting/3110.2004-12-08.GP.spam.txt
+                    spamClassifier.py -l -m 4 -t
+        """
+        sys.exit(0)
     
     if "-l" in sys.argv:
         loud = True
